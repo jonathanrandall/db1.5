@@ -91,9 +91,9 @@ void configCamera(){
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG;
 
-  config.frame_size = FRAMESIZE_QVGA;
-  config.jpeg_quality = 9;
-  config.fb_count = 1;
+  config.frame_size = FRAMESIZE_VGA;
+  config.jpeg_quality = 10;
+  config.fb_count = 2;
 
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
@@ -110,7 +110,8 @@ void liveCam(uint8_t num){
       return;
   }
   //replace this with your own function
-  webSocket.sendBIN(num, fb->buf, fb->len);
+  webSocket.broadcastBIN(fb->buf, fb->len);
+  // webSocket.sendBIN(num, fb->buf, fb->len);
 
   //return the frame buffer back to be reused
   esp_camera_fb_return(fb);
