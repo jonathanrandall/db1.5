@@ -11,94 +11,77 @@
 </head>
 
 <body>
-
     <br>
+    <div class="cards">
+        <div class="card" align="center">
+            <img id="ESP32-1"
+                src="C:\Users\jonny\Documents\Arduino\Projects\Jessica Mothers day\pictures\final_pictures\alicia_baby2.png" />
+            <button class="button button2" id="stream1"
+                onclick="fetch(document.location.origin+'/control?var=car&val=2');">STREAM1</button>
+        </div>
+        <div class="card" align ="center">
+            <img id="ESP32-2"
+                src="C:\Users\jonny\Documents\Arduino\Projects\Jessica Mothers day\pictures\final_pictures\alicia_baby.png" />
+
+            <button class="button button2" id="stream2"
+                onclick="fetch(document.location.origin+'/control?var=car&val=2');">STREAM2</button>
+        </div>
+
+    </div>
     <br>
-    <section class="main">
-        <figure>
-            <div id="stream-container" class="image-container">
-                <div class="close" id="close-stream">×</div>
-                <img id="stream" src="" class="rotate90">
-            </div>
-        </figure>
-        <br>
-        <br>
+
+    <div class="cards" align="center">
+        <div class="card" > <!--onmouseup="update_motor_status('stop');" ontouchend="update_motor_status('stop');"-->
+            <table>
+
+                <tr>
+                    <td></td>
+                    <td align="center"><button class="button button2" id="forward"
+                            onmousedown="update_motor_status('forward');"
+                            ontouchstart="update_motor_status('forward');">FORWARD</button>
+                    </td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td align="center"><button class="button button2" id="turnleft"
+                            onmousedown="update_motor_status('left');"
+                            ontouchstart="update_motor_status('left');">LEFT</button></td>
+
+                    <td align="center"><button class="button button3" id="stop"
+                            onmousedown="update_motor_status('stop');"
+                            ontouchstart="update_motor_status('stop');">STOP</button></td>
+
+                    <td align="center"><button class="button button2" id="turnright"
+                            onmousedown="update_motor_status('right');"
+                            ontouchstart="update_motor_status('right');">RIGHT</button></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td align="center"><button class="button button2" id="backward"
+                            onmousedown="update_motor_status('back'); console.log('md')"
+                            ontouchstart="update_motor_status('back');">REVERSE</button>
+                    </td>
+                    <td></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <br>
+
+    <div class="cards" align="center">
+        <div class="card">
 
 
-        <section id="buttons">
+            <p class="switch">
+                <input type="range" onchange="update_motor_speed(this)" id="slider2" min="0" max="255" step="1"
+                    value="0" class="slider">
+            </p>
 
-            <div id="controls" class="control-container">
-                <table>
-                    <tr>
-                        <td align="center"><button class="button button6" id="get-still">Image</button></td>
-                        <td align="center"><button id="toggle-stream">Start</button></td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td align="center"><button class="button button2" id="forward"
-                                onclick="fetch(document.location.origin+'/control?var=car&val=1');">FORWARD</button>
-                        </td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td align="center"><button class="button button2" id="turnleft"
-                                onclick="fetch(document.location.origin+'/control?var=car&val=2');">LEFT</button></td>
-                        <td align="center"></td>
-                        <td align="center"><button class="button button2" id="turnright"
-                                onclick="fetch(document.location.origin+'/control?var=car&val=4');">RIGHT</button></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td align="center"><button class="button button2" id="backward"
-                                onclick="fetch(document.location.origin+'/control?var=car&val=5');">REVERSE</button>
-                        </td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td align="center"><button class="button button4" id="flash"
-                                onclick="fetch(document.location.origin+'/control?var=flash&val=1');">LIGHT ON</button>
-                        </td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td align="center"><button class="button button4" id="flashoff"
-                                onclick="fetch(document.location.origin+'/control?var=flashoff&val=0');">LIGHT
-                                OFF</button></td>
-                        <td></td>
-                    </tr>
-                </table>
-            </div>
-            <br>
-            <div id="sliders" class="slider-container">
-                <table>
-                    <tr>
-                        <td>Motor Speed:</td>
-                        <td align="center" colspan="2"><input type="range" id="speed" min="0" max="255" value="200"
-                                onchange="try{fetch(document.location.origin+'/control?var=speed&val='+this.value);}catch(e){}">
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Vid Quality:</td>
-                        <td align="center" colspan="2"><input type="range" id="quality" min="10" max="63" value="10"
-                                onchange="try{fetch(document.location.origin+'/control?var=quality&val='+this.value);}catch(e){}">
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Vid Size:</td>
-                        <td align="center" colspan="2"><input type="range" id="framesize" min="0" max="6" value="5"
-                                onchange="try{fetch(document.location.origin+'/control?var=framesize&val='+this.value);}catch(e){}">
-                        </td>
-                    </tr>
+            <p class="state">Speed: <span id="textSliderValue">0</span>, Robot State: <span
+                    id="textRobotState">stop</span></p>
+        </div>
+    </div>
 
-
-                </table>
-            </div>
-        </section>
-    </section>
-   
     <script src="script.js"></script>
 </body>
 

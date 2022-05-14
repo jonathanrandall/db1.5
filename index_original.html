@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <title>ESP32 CAM Robot</title>
+
+
+</head>
+
+<body>
+
+    <br>
+    <br>
+    <section class="main">
+        <figure>
+            <div id="stream-container" class="image-container">
+                <div class="close" id="close-stream">×</div>
+                <img id="stream" src="" class="rotate90">
+            </div>
+        </figure>
+        <br>
+        <br>
+
+
+        <section id="buttons">
+
+            <div id="controls" class="control-container">
+                <table>
+                    <tr>
+                        <td align="center"><button class="button button6" id="get-still">Image</button></td>
+                        <td align="center"><button id="toggle-stream">Start</button></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td align="center"><button class="button button2" id="forward"
+                                onclick="fetch(document.location.origin+'/control?var=car&val=1');"  onmousedown="toggleCheckbox('forward');" ontouchstart="toggleCheckbox('forward');" onmouseup="toggleCheckbox('stop');" ontouchend="toggleCheckbox('stop');">FORWARD</button>
+                        </td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td align="center"><button class="button button2" id="turnleft"
+                                onclick="fetch(document.location.origin+'/control?var=car&val=2');">LEFT</button></td>
+                        
+                        <td align="center"><button class="button button3" id="stop"
+                            onclick="fetch(document.location.origin+'/control?var=car&val=7');">STOP</button></td>
+                        
+                        <td align="center"><button class="button button2" id="turnright"
+                                onclick="fetch(document.location.origin+'/control?var=car&val=4');">RIGHT</button></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td align="center"><button class="button button2" id="backward"
+                                onclick="fetch(document.location.origin+'/control?var=car&val=5');">REVERSE</button>
+                        </td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td align="center"><button class="button button4" id="flash"
+                                onclick="fetch(document.location.origin+'/control?var=flash&val=1');">LIGHT ON</button>
+                        </td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td align="center"><button class="button button4" id="flashoff"
+                                onclick="fetch(document.location.origin+'/control?var=flashoff&val=0');">LIGHT
+                                OFF</button></td>
+                        <td></td>
+                    </tr>
+                </table>
+            </div>
+            <br>
+            <div id="sliders" class="slider-container">
+                <table>
+                    <tr>
+                        <td>Motor Speed:</td>
+                        <td align="center" colspan="2"><input type="range" id="speed" min="0" max="255" value="200"
+                                onchange="try{fetch(document.location.origin+'/control?var=speed&val='+this.value);}catch(e){}">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Vid Quality:</td>
+                        <td align="center" colspan="2"><input type="range" id="quality" min="10" max="63" value="10"
+                                onchange="try{fetch(document.location.origin+'/control?var=quality&val='+this.value);}catch(e){}">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Vid Size:</td>
+                        <td align="center" colspan="2"><input type="range" id="framesize" min="0" max="6" value="5"
+                                onchange="try{fetch(document.location.origin+'/control?var=framesize&val='+this.value);}catch(e){}">
+                        </td>
+                    </tr>
+
+
+                </table>
+            </div>
+        </section>
+    </section>
+   
+    <script src="script.js"></script>
+</body>
+
+</html>
