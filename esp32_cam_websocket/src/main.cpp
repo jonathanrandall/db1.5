@@ -1,35 +1,74 @@
-#include <Arduino.h>
 #include "esp_camera.h"
 #include <WiFi.h>
-#include <ArduinoWebsockets.h>
-#define CAMERA_MODEL_AI_THINKER
-#include "camera_pins.h"
+#include <WebSocketsServer.h>
+#include "ssid_stuff.h"
 
-const char* ssid = "ThatProject";
-const char* password = "California";
-const char* websocket_server_host = "<YOUR_LOCAL_IP_ADDRESS_HERE>";
-const uint16_t websocket_server_port = 8888;
+#define PWDN_GPIO_NUM     32
+#define RESET_GPIO_NUM    -1
+#define XCLK_GPIO_NUM      0
+#define SIOD_GPIO_NUM     26
+#define SIOC_GPIO_NUM     27
 
-using namespace websockets;
-WebsocketsClient client;
-bool isWebSocketConnected;
+#define Y9_GPIO_NUM       35
+#define Y8_GPIO_NUM       34
+#define Y7_GPIO_NUM       39
+#define Y6_GPIO_NUM       36
+#define Y5_GPIO_NUM       21
+#define Y4_GPIO_NUM       19
+#define Y3_GPIO_NUM       18
+#define Y2_GPIO_NUM        5
+#define VSYNC_GPIO_NUM    25
+#define HREF_GPIO_NUM     23
+#define PCLK_GPIO_NUM     22
 
-void onEventsCallback(WebsocketsEvent event, String data){
-  if(event == WebsocketsEvent::ConnectionOpened){
-    Serial.println("Connection Opened");
-    isWebSocketConnected = true;
-  }else if(event == WebsocketsEvent::ConnectionClosed){
-    Serial.println("Connection Closed");
-    isWebSocketConnected = false;
-    webSocketConnect();
-  }
-}
 
-void setup() {
-  isWebSocketConnected = false;
-  Serial.begin(115200);
-  Serial.println();
+WebSocketsServer webSocket = WebSocketsServer(81);
+WiFiServer server(80);
+uint8_t cam_num;
+bool connected = false;
 
+String index_html =   "<html>\n \
+<head>\n \
+<title> WebSockets Client</title>\n \
+<script src='http://code.jquery.com/jquery-1.9.1.min.js'></script>\n \
+</head>\n \
+<body>\n \
+<img id='live' src=''>\n \
+</body>\n \
+</html>\n \
+<script>\n \
+jQuery(function($){\n \
+if (!('WebSocket' in window)) {\n \
+alert('Your browser does not support web sockets');\n \
+}else{\n \
+setup();\n \
+}\n \
+function setup(){\n \
+var host = 'ws://server_ip:81';\n \
+var socket = new WebSocket(host);\n \
+socket.binaryType = 'arraybuffer';\n \
+if(socket){\n \
+socket.onopen = function(){\n \
+}\n \
+socket.onmessage = function(msg){\n \
+var bytes = new Uint8Array(msg.data);\n \
+var binary= '';\n \
+var len = bytes.byteLength;\n \
+for (var i = 0; i < len; i++) {\n \
+binary += String.fromCharCode(bytes[i])\n \
+}\n \
+var img = document.getElementById('live');\n \
+img.src = 'data:image/jpg;base64,'+window.btoa(binary);\n \
+}\n \
+socket.onclose = function(){\n \
+showServerResponse('The connection has been closed.');\n \
+}\n \
+}\n \
+}\n \
+});\n \
+</script>";
+
+void configCamera(){
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
@@ -49,64 +88,86 @@ void setup() {
   config.pin_sscb_scl = SIOC_GPIO_NUM;
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
-  config.xclk_freq_hz = 10000000;
+  config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG;
-  config.frame_size = FRAMESIZE_VGA;
-  config.jpeg_quality = 40;
-  config.fb_count = 2;
 
-  // camera init
+  config.frame_size = FRAMESIZE_QVGA;
+  config.jpeg_quality = 9;
+  config.fb_count = 1;
+
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
     Serial.printf("Camera init failed with error 0x%x", err);
     return;
   }
- 
+}
 
+void liveCam(uint8_t num){
+  //capture a frame
+  camera_fb_t * fb = esp_camera_fb_get();
+  if (!fb) {
+      Serial.println("Frame buffer could not be acquired");
+      return;
+  }
+  //replace this with your own function
+  webSocket.sendBIN(num, fb->buf, fb->len);
+
+  //return the frame buffer back to be reused
+  esp_camera_fb_return(fb);
+}
+
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+
+    switch(type) {
+        case WStype_DISCONNECTED:
+            Serial.printf("[%u] Disconnected!\n", num);
+            break;
+        case WStype_CONNECTED:
+            cam_num = num;
+            connected = true;
+            break;
+        case WStype_TEXT:
+        case WStype_BIN:
+        case WStype_ERROR:      
+        case WStype_FRAGMENT_TEXT_START:
+        case WStype_FRAGMENT_BIN_START:
+        case WStype_FRAGMENT:
+        case WStype_FRAGMENT_FIN:
+            break;
+    }
+}
+
+void setup() {
+  Serial.begin(115200);
   WiFi.begin(ssid, password);
-
+  Serial.println("");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
   Serial.println("");
-  Serial.println("WiFi connected");
-
-  client.onEvent(onEventsCallback);
-  webSocketConnect();
+  String IP = WiFi.localIP().toString();
+  Serial.print("IP address: " + IP);
+  index_html.replace("server_ip", IP);
+  server.begin();
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
+  configCamera();
 }
-
-void webSocketConnect(){
-   while(!client.connect(websocket_server_host, websocket_server_port, "/")){
-    delay(500);
-    Serial.print(".");
+    
+void http_resp(){
+  WiFiClient client = server.available();
+  if (client.connected() && client.available()) {                   
+    client.flush();          
+    client.print(index_html);
+    client.stop();
   }
-  Serial.println("Websocket Connected!");
 }
 
 void loop() {
-
-  if(client.available()){
-    client.poll();
+  http_resp();
+  webSocket.loop();
+  if(connected == true){
+    liveCam(cam_num);
   }
-  
-  if(!isWebSocketConnected) return;
-  
-  camera_fb_t *fb = esp_camera_fb_get();
-  if(!fb){
-    Serial.println("Camera capture failed");
-    esp_camera_fb_return(fb);
-    return;
-  }
-
-  if(fb->format != PIXFORMAT_JPEG){
-    Serial.println("Non-JPEG data not implemented");
-    return;
-  }
-  
-  //fb->buf[12] = 0x01; //FIRST CAM
-  fb->buf[12] = 0x02; //SECOND CAM
-
-  client.sendBinary((const char*) fb->buf, fb->len);
-  esp_camera_fb_return(fb);
 }
