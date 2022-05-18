@@ -22,16 +22,21 @@ UBaseType_t n_messages;
 enum state
 {
     fwd = 0,
-    rev = 1,
-    lft = 2,
-    rgt = 3,
-    stp = 4,
+    rev,
+    lft,
+    rgt,
+    fwdrgt,
+    fwdlft,
+    revrgt,
+    revlft,
+    stp,
     e_stop,
     e_stop_clear
 };
 state actstate = stp;
 String str_status;
-String status_names[7] = {"forward", "back", "left", "right", "stop", "e_stop", "e_stop_clear"};
+String status_names[11] = {"forward", "back", "left", "right", "forward_right", "forward_left","back_right", 
+                            "back_left", "stop", "e_stop", "e_stop_clear"};
 
 state st1 = stp;
 
@@ -52,30 +57,57 @@ const int freq = 4000;
 const int mtr_left_pwm_channel = 8;
 const int mtr_right_pwm_channel = 4;
 const int lresolution = 8;
+unsigned long max_motor_speed = 255;
 
-volatile int motor_speed = 200;
+volatile int motor_speed = 100;
 volatile unsigned long previous_time = 0;
 volatile unsigned long move_interval = 350;
 volatile unsigned long message_time = 100;
 
-int mtr_lft_state[] = {LEFT_FWD, LEFT_BACK, LEFT_BACK, LEFT_FWD}; // fwd, rev, lft, right
-int mtr_rgt_state[] = {RIGHT_FWD, RIGHT_BACK, RIGHT_FWD, RIGHT_BACK};
+int mtr_lft_state[] = {LEFT_FWD, LEFT_BACK, LEFT_BACK, LEFT_FWD,LEFT_FWD,LEFT_FWD,LEFT_BACK,LEFT_BACK}; // fwd, rev, lft, right
+int mtr_rgt_state[] = {RIGHT_FWD, RIGHT_BACK, RIGHT_FWD, RIGHT_BACK,RIGHT_FWD,RIGHT_FWD,RIGHT_BACK,RIGHT_BACK};
 
 void robot_stop()
 {
     ledcWrite(mtr_right_pwm_channel, 0);
     ledcWrite(mtr_left_pwm_channel, 0);
-    Serial.println("fobot stop");
+    // Serial.println("fobot stop");
     if ((int)actstate < (int)stp)
         actstate = stp;
 }
 
-void robot_set_speed(int ms = motor_speed)
+void robot_set_speed(bool t1, int ms = motor_speed)
 {
     if ((int)actstate < (int)stp)
     {
-        ledcWrite(mtr_right_pwm_channel, ms);
-        ledcWrite(mtr_left_pwm_channel, ms);
+        if(((int)actstate>(int)rgt) && t1){
+            int ls;
+            int rs;
+            if(actstate == fwdlft || actstate == revlft){
+                ls = min(30,ms-50);
+                rs = max(255, ms+50);
+            } else {
+                rs = min(30,ms-50);
+                ls = max(255, ms+50);
+            }
+            robot_set_speed(ls,rs);
+        } else {
+            ledcWrite(mtr_right_pwm_channel, ms);
+            ledcWrite(mtr_left_pwm_channel, ms);
+        }
+        
+    }
+}
+
+
+//set left and right seperately.
+void robot_set_speed(int ls = motor_speed, int rs = motor_speed)
+{
+    if ((int)actstate < (int)stp)
+    {
+        
+        ledcWrite(mtr_right_pwm_channel, rs);
+        ledcWrite(mtr_left_pwm_channel, ls);
     }
 }
 
@@ -92,12 +124,13 @@ unsigned long robot_set_and_send_command(state st)
     if (st == e_stop)
     {
         robot_stop();
+        return 3;
     }
 
     if (st == actstate)
     {
         return 2; // don't need to set it if already set
-        Serial.println("no need to send");
+        // Serial.println("no need to send");
     }
     else
     {
@@ -111,7 +144,7 @@ unsigned long robot_set_and_send_command(state st)
         }                                                 // portMAX_DELAY);
         xQueueReceive(queue_ret, &ret_val, message_time); // hand shake
     }
-    previous_time = millis(); // not sure if this line should be here
+    // previous_time = millis(); // not sure if this line should be here
     if (ret_val)
         return 1;
     return 0;
@@ -124,20 +157,17 @@ void robot_move_loop(void *parameter)
     {
         state st;
         uint8_t rv = 1;
-        delay(1);
-        // Serial.println("in robot loop");
-
-        // st = actstate;
-        Serial.println("waiting for order");
+        // delay(1);
+        
         xQueueReceive(queue, &st, portMAX_DELAY);
-        Serial.println("first order recieved: " + String((int)st));
+        // Serial.println("first order recieved: " + String((int)st));
         if ((int)st < (int)stp)
         {
-            Serial.println("order recieved");
+            // Serial.println("order recieved");
 
             digitalWrite(LEFT_MTR_DIR, mtr_lft_state[(int)st]);
             digitalWrite(RIGHT_MTR_DIR, mtr_rgt_state[(int)st]);
-            robot_set_speed();
+            robot_set_speed(true);
         }
         else
         {
@@ -249,7 +279,7 @@ void robot_move_(state st)
         actstate = st;
         digitalWrite(LEFT_MTR_DIR, mtr_lft_state[(int)st]);
         digitalWrite(RIGHT_MTR_DIR, mtr_rgt_state[(int)st]);
-        robot_set_speed();
+        robot_set_speed(true);
     }
 }
 

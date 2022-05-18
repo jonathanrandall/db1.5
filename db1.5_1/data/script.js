@@ -58,6 +58,7 @@ function initWebSocket() {
     websocket.onopen = onOpen;
     websocket.onclose = onClose;
     websocket.onmessage = onMessage;
+    setup(); //for image
 }
 function onOpen(event) {
     // var jsonData = '{ "action": "status","value": "stop"}';
@@ -106,11 +107,11 @@ function update_motor_status(element) {
     catch (e) {
         console.log(e.message);
     }
-    
+
 }
 
 function send_motor_status() {
-   
+
     obj_2_update.action = "update";
     obj_2_update.value = document.getElementById("textRobotState").innerHTML;
     obj_2_send = JSON.stringify(obj_2_update);
@@ -119,7 +120,7 @@ function send_motor_status() {
     catch (e) {
         console.log(e.message);
     }
-    
+
 }
 
 function update_motor_speed(element) {
@@ -134,12 +135,65 @@ function update_motor_speed(element) {
     obj_2_send = JSON.stringify(obj_2_update);
     console.log(obj_2_send);
     websocket.send(obj_2_send);
-    
+
 }
 
+function setup() {
+    var host = 'ws://192.168.1.119:81';
+    var socket = new WebSocket(host);
+    socket.binaryType = 'arraybuffer';
+    if (socket) {
+        socket.onopen = function () {
+        }
+        socket.onmessage = function (msg) {
+            var bytes = new Uint8Array(msg.data);
+            var binary = '';
+            var len = bytes.byteLength;
+            for (var i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i])
+            }
+            var img = document.getElementById('ESP32-2');
+            img.src = 'data:image/jpg;base64,' + window.btoa(binary);
+        }
+        socket.onclose = function () {
+            showServerResponse('The connection has been closed.');
+        }
+    }
+}
 
 // Function to get and update GPIO states on the webpage when it loads for the first time
 function getStates() {
     websocket.send("states");
 }
+
 window.addEventListener('load', onLoad);
+
+// jQuery(function ($) {
+//     if (!('WebSocket' in window)) {
+//         alert('Your browser does not support web sockets');
+//     } else {
+//         setup();
+//     }
+//     function setup() {
+//         var host = 'ws://192.168.1.119:81';
+//         var socket = new WebSocket(host);
+//         socket.binaryType = 'arraybuffer';
+//         if (socket) {
+//             socket.onopen = function () {
+//             }
+//             socket.onmessage = function (msg) {
+//                 var bytes = new Uint8Array(msg.data);
+//                 var binary = '';
+//                 var len = bytes.byteLength;
+//                 for (var i = 0; i < len; i++) {
+//                     binary += String.fromCharCode(bytes[i])
+//                 }
+//                 var img = document.getElementById('live');
+//                 img.src = 'data:image/jpg;base64,' + window.btoa(binary);
+//             }
+//             socket.onclose = function () {
+//                 showServerResponse('The connection has been closed.');
+//             }
+//         }
+//     }
+// });

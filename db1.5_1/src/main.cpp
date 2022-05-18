@@ -6,9 +6,10 @@
 #include "SPIFFS.h"
 #include <Arduino_JSON.h>
 #include "motor_ctrl_stuff.h"
+#include "ssid_stuff.h"
 
-const char *ssid = "";
-const char *password = "";
+// const char *ssid = "";  //defined in ssid.h
+// const char *password = "";
 // Create AsyncWebServer object on port 80
 
 AsyncWebServer server(80);
@@ -57,6 +58,10 @@ void init_msj()
   motor_status_json["back"] = ((int)rev);
   motor_status_json["left"] = ((int)lft);
   motor_status_json["right"] = ((int)rgt);
+  motor_status_json["forwardleft"] = ((int)fwdlft);
+  motor_status_json["backleft"] = ((int)revlft);
+  motor_status_json["forwardright"] = ((int)fwdrgt);
+  motor_status_json["backright"] = ((int)revrgt);
   motor_status_json["stop"] = ((int)stp);
   motor_status_json["e_stop"] = ((int)e_stop);
   motor_status_json["e_stop_clear"] = ((int)e_stop_clear);

@@ -35,12 +35,22 @@
             <table>
 
                 <tr>
-                    <td></td>
+                    
+                    <td align="center"><button class="button button2" id="forwardleft"
+                            onmousedown="update_motor_status('forwardleft');"
+                            ontouchstart="update_motor_status('forwardleft');">FWDLFT</button>
+                    </td>
+                    
                     <td align="center"><button class="button button2" id="forward"
                             onmousedown="update_motor_status('forward');"
                             ontouchstart="update_motor_status('forward');">FORWARD</button>
                     </td>
-                    <td></td>
+                    
+                    <td align="center"><button class="button button2" id="forwardright"
+                            onmousedown="update_motor_status('forwardright');"
+                            ontouchstart="update_motor_status('forwardright');">FWDRGT</button>
+                    </td>
+                    
                 </tr>
                 <tr>
                     <td align="center"><button class="button button2" id="turnleft"
@@ -56,10 +66,24 @@
                             ontouchstart="update_motor_status('right');">RIGHT</button></td>
                 </tr>
                 <tr>
-                    <td></td>
+                    <td align="center"><button class="button button2" id="backleft"
+                        onmousedown="update_motor_status('backleft');"
+                        ontouchstart="update_motor_status('backleft');">BKLFT</button>
+                    </td>
                     <td align="center"><button class="button button2" id="backward"
                             onmousedown="update_motor_status('back'); console.log('md')"
                             ontouchstart="update_motor_status('back');">REVERSE</button>
+                    </td>
+                    <td align="center"><button class="button button2" id="backright"
+                        onmousedown="update_motor_status('backright');"
+                        ontouchstart="update_motor_status('backright');">BKRGT</button>
+                </td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td align="center"><button class="button button3a" id="stopbig"
+                            onmousedown="update_motor_status('stop'); console.log('md')"
+                            ontouchstart="update_motor_status('stop');">STOP</button>
                     </td>
                     <td></td>
                 </tr>
