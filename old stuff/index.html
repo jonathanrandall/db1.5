@@ -14,21 +14,20 @@
     <br>
     <div class="container">
         <div class="card" align="center">
-            <img id="FRONT"
+            <img id="ESP32-1"
                 src="C:\Users\jonny\Documents\Arduino\Projects\Jessica Mothers day\pictures\final_pictures\alicia_baby2.png" />
-           <div class = "cards"> 
-               <table><tr><td align = "center">
-               <button class="button button2" id="stream1"
-               onclick="try{document.getElementById('REAR').id='FRONT';} catch(e){}">FRONT</button>
-                <!--onclick="setup('ws://192.168.1.184:81','FRONT');">FRONT</button>-->
-            </td><td></td><td align = "center">
+            <button class="button button2" id="stream1"
+                onclick="fetch(document.location.origin+'/control?var=car&val=2');">STREAM1</button>
+        </div>
+        <div class="card" align ="center">
+            <img id="ESP32-2"
+                src="C:\Users\jonny\Documents\Arduino\Projects\Jessica Mothers day\pictures\final_pictures\alicia_baby.png" />
+
             <button class="button button2" id="stream2"
-            onclick="try{document.getElementById('FRONT').id='REAR';} catch(e){}">REAR</button>
-                <!--onclick="setup('ws://192.168.1.185:81','REAR');">REAR</button>-->
-            </tr></table>
+                onclick="fetch(document.location.origin+'/control?var=car&val=2');">STREAM2</button>
         </div>
 
-    </div></div>
+    </div>
     <br>
 
     <div class="cards" align="center">

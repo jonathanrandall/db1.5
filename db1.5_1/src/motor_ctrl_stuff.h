@@ -84,11 +84,11 @@ void robot_set_speed(bool t1, int ms = motor_speed)
             int ls;
             int rs;
             if(actstate == fwdlft || actstate == revlft){
-                ls = min(30,ms-50);
-                rs = max(255, ms+50);
+                ls = min(30,ms-30);
+                rs = max(255, ms+30);
             } else {
-                rs = min(30,ms-50);
-                ls = max(255, ms+50);
+                rs = min(30,ms-30);
+                ls = max(255, ms+30);
             }
             robot_set_speed(ls,rs);
         } else {

@@ -1,3 +1,5 @@
+
+
 // Import required libraries
 #include <Arduino.h>
 #include <WiFi.h>
@@ -7,6 +9,21 @@
 #include <Arduino_JSON.h>
 #include "motor_ctrl_stuff.h"
 #include "ssid_stuff.h"
+#include "encoders_stuff.h"
+
+/*
+#define LEFT_MTR_DIR 26
+#define LEFT_MTR_PWM 27
+#define RIGHT_MTR_DIR 12
+#define RIGHT_MTR_PWM 32
+
+#define encoder0PinA 2      // encoder 1
+#define encoder0PinB 4
+
+#define encoder1PinA 16     // encoder 2
+#define encoder1PinB 17
+*/
+
 
 // const char *ssid = "";  //defined in ssid.h
 // const char *password = "";
@@ -98,6 +115,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
       last_update = millis();
       const char *status = received_object["value"];
       str_status = String(status);
+      Serial.println(str_status);
       int stmp = motor_status_json[status];
       Serial.println(stmp);
       robot_set_and_send_command((state)stmp);
@@ -117,6 +135,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
         // then ew update
         last_update = millis();
         const char *status = received_object["value"];
+        
         str_status = String(status);
         int stmp = motor_status_json[status];
         // Serial.println(stmp);
@@ -186,6 +205,7 @@ void setup()
 
   init_msj();
   initSPIFFS();
+  
   initWiFi();
   initWebSocket();
 
@@ -222,6 +242,9 @@ void setup()
       0,                 /* Priority of the task */
       &stp_robot_moving, /* Task handle. */
       1);                /* Core where the task should run */
+
+      
+  init_encoders();
 }
 
 void loop()

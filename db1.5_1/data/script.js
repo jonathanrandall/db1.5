@@ -36,6 +36,9 @@
 
 var gateway = `ws://${window.location.hostname}/ws`;
 var websocket;
+var socket;
+var imsrc1 = 'ws://192.168.1.185:81';
+var imsrc2 = 'ws://192.168.1.184:81'
 
 
 setInterval(() => {
@@ -58,7 +61,8 @@ function initWebSocket() {
     websocket.onopen = onOpen;
     websocket.onclose = onClose;
     websocket.onmessage = onMessage;
-    setup(); //for image
+    // setup('ws://192.168.1.184:81','FRONT'); //for image
+    // setup('ws://192.168.1.184:81','REAR'); //for image
 }
 function onOpen(event) {
     // var jsonData = '{ "action": "status","value": "stop"}';
@@ -138,27 +142,48 @@ function update_motor_speed(element) {
 
 }
 
-function setup() {
-    var host = 'ws://192.168.1.119:81';
-    var socket = new WebSocket(host);
+function setup(host, el) {
+    // var host = 'ws://192.168.1.184:81';
+    // set_on_message_off(imsrc1);
+    // if(socket) socket.terminate();
+
+    img.src = "";
+    // set_on_message_off(imsrc2);
+
+    socket = new WebSocket(host);
+
+
     socket.binaryType = 'arraybuffer';
     if (socket) {
         socket.onopen = function () {
         }
         socket.onmessage = function (msg) {
+            var img;
+            try {
+                img = document.getElementById(el);                
+            }
+            catch (error) { return;}
             var bytes = new Uint8Array(msg.data);
             var binary = '';
             var len = bytes.byteLength;
             for (var i = 0; i < len; i++) {
                 binary += String.fromCharCode(bytes[i])
             }
-            var img = document.getElementById('ESP32-2');
             img.src = 'data:image/jpg;base64,' + window.btoa(binary);
+            
         }
         socket.onclose = function () {
             showServerResponse('The connection has been closed.');
         }
     }
+}
+
+function set_on_message_off(imsrcx) {
+    var socket = new websocket(imsrcx);
+    socket.terminate();
+    // if(socket){
+    //     socket.onmessage = function(msg){}
+    // }
 }
 
 // Function to get and update GPIO states on the webpage when it loads for the first time

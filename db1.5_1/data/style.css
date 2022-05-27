@@ -34,6 +34,11 @@ section.main {
     display: flex
 }
 
+.container {
+    width: 500px;
+    margin: 0 auto;
+}
+
 .card {
     background-color: #6e26b6;
     ;
@@ -71,11 +76,15 @@ img {
     object-fit: contain;
 }
 
-@media (min-width:800px) and (orientation:landscape) {
+@media (max-width:640px) and (orientation:landscape) {
     #content {
         display: flex;
         flex-wrap: nowrap;
         align-items: stretch
+    }
+
+    .container {
+        width: 100%;
     }
 
     .cards {
@@ -106,7 +115,16 @@ img {
     }
 }
 
+.btn-container {
+    font-size: 0;
+    
+}
 
+.btn-container button {
+    width: 100%;
+    font-size: initial;
+    padding: 15px;
+}
 
 .range-max,
 .range-min {
