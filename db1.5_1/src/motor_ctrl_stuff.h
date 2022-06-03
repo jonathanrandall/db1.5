@@ -67,6 +67,8 @@ volatile unsigned long message_time = 100;
 int mtr_lft_state[] = {LEFT_FWD, LEFT_BACK, LEFT_BACK, LEFT_FWD,LEFT_FWD,LEFT_FWD,LEFT_BACK,LEFT_BACK}; // fwd, rev, lft, right
 int mtr_rgt_state[] = {RIGHT_FWD, RIGHT_BACK, RIGHT_FWD, RIGHT_BACK,RIGHT_FWD,RIGHT_FWD,RIGHT_BACK,RIGHT_BACK};
 
+// void robot_set_speed_lr(int ls = motor_speed, int rs = motor_speed);
+
 void robot_stop()
 {
     ledcWrite(mtr_right_pwm_channel, 0);
@@ -76,11 +78,22 @@ void robot_stop()
         actstate = stp;
 }
 
-void robot_set_speed(bool t1, int ms = motor_speed)
+void robot_set_speed_lr(int ls = motor_speed, int rs = motor_speed)
 {
     if ((int)actstate < (int)stp)
     {
-        if(((int)actstate>(int)rgt) && t1){
+        ledcWrite(mtr_right_pwm_channel, rs);
+        ledcWrite(mtr_left_pwm_channel, ls);
+    }
+}
+
+void robot_set_speed(int ms = motor_speed)
+{
+    // Serial.print("inside robot set speed: ");
+    // Serial.println((int) actstate);
+    if ((int)actstate < (int)stp)
+    {
+        if(((int)actstate>(int)rgt)){
             int ls;
             int rs;
             if(actstate == fwdlft || actstate == revlft){
@@ -90,7 +103,7 @@ void robot_set_speed(bool t1, int ms = motor_speed)
                 rs = min(30,ms-30);
                 ls = max(255, ms+30);
             }
-            robot_set_speed(ls,rs);
+            robot_set_speed_lr(ls, rs);
         } else {
             ledcWrite(mtr_right_pwm_channel, ms);
             ledcWrite(mtr_left_pwm_channel, ms);
@@ -101,15 +114,7 @@ void robot_set_speed(bool t1, int ms = motor_speed)
 
 
 //set left and right seperately.
-void robot_set_speed(int ls = motor_speed, int rs = motor_speed)
-{
-    if ((int)actstate < (int)stp)
-    {
-        
-        ledcWrite(mtr_right_pwm_channel, rs);
-        ledcWrite(mtr_left_pwm_channel, ls);
-    }
-}
+
 
 unsigned long robot_set_and_send_command(state st)
 {
@@ -135,7 +140,7 @@ unsigned long robot_set_and_send_command(state st)
     else
     {
         actstate = st;
-        Serial.println("actstate update" + String(actstate));
+        // Serial.println("actstate update" + String(actstate));
         // n_messages = uxQueueMessagesWaiting( queue );
         // Serial.println("putting message in queu");
         if (xQueueSend(queue, &st, message_time))
@@ -167,7 +172,7 @@ void robot_move_loop(void *parameter)
 
             digitalWrite(LEFT_MTR_DIR, mtr_lft_state[(int)st]);
             digitalWrite(RIGHT_MTR_DIR, mtr_rgt_state[(int)st]);
-            robot_set_speed(true);
+            robot_set_speed();
         }
         else
         {

@@ -61,8 +61,8 @@ function initWebSocket() {
     websocket.onopen = onOpen;
     websocket.onclose = onClose;
     websocket.onmessage = onMessage;
-    // setup('ws://192.168.1.184:81','FRONT'); //for image
-    // setup('ws://192.168.1.184:81','REAR'); //for image
+    setup('ws://192.168.1.184:81','FRONT'); //for image
+    setup('ws://192.168.1.185:81','REAR'); //for image
 }
 function onOpen(event) {
     // var jsonData = '{ "action": "status","value": "stop"}';
@@ -147,7 +147,7 @@ function setup(host, el) {
     // set_on_message_off(imsrc1);
     // if(socket) socket.terminate();
 
-    img.src = "";
+    // img.src = "";
     // set_on_message_off(imsrc2);
 
     socket = new WebSocket(host);
@@ -160,17 +160,19 @@ function setup(host, el) {
         socket.onmessage = function (msg) {
             var img;
             try {
-                img = document.getElementById(el);                
+                img = document.getElementById(el);
             }
-            catch (error) { return;}
+            catch (error) {
+                console.log('returning');
+                 return; }
             var bytes = new Uint8Array(msg.data);
             var binary = '';
             var len = bytes.byteLength;
             for (var i = 0; i < len; i++) {
                 binary += String.fromCharCode(bytes[i])
             }
-            img.src = 'data:image/jpg;base64,' + window.btoa(binary);
-            
+            try{ img.src = 'data:image/jpg;base64,' + window.btoa(binary);} catch(e){}
+
         }
         socket.onclose = function () {
             showServerResponse('The connection has been closed.');
