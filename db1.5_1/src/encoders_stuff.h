@@ -4,7 +4,7 @@
 // wheel encoder interrupts
 #include <Arduino.h>
 
-#define encoder0PinA 2      // encoder 1
+#define encoder0PinA 33      // encoder 1 r
 #define encoder0PinB 4
 
 #define encoder1PinA 16     // encoder 2
@@ -13,6 +13,12 @@
 volatile long encoder0Pos = 0;    // encoder 1
 volatile long encoder1Pos = 0;    // encoder 2
 
+const float ppr = 753.2; //pulses per revolution
+const float wheel_diameter = 101;//mm
+const float circum = 317.3; //mm
+const float pulse_dist = circum/ppr;
+
+const float one_m = 1000/pulse_dist; //number of pulses to travel 1m
 
 void doEncoderA(){  
 
@@ -125,11 +131,11 @@ void init_encoders(){
   pinMode(encoder1PinA, INPUT_PULLUP); 
   pinMode(encoder1PinB, INPUT_PULLUP);
 
-  attachInterrupt(0, doEncoderA, CHANGE);
-  attachInterrupt(1, doEncoderB, CHANGE); 
+  attachInterrupt(encoder0PinA, doEncoderA, CHANGE);
+  attachInterrupt(encoder0PinB, doEncoderB, CHANGE); 
 
-  attachInterrupt(4, doEncoderC, CHANGE);
-  attachInterrupt(5, doEncoderD, CHANGE); 
+  attachInterrupt(encoder1PinA, doEncoderC, CHANGE);
+  attachInterrupt(encoder1PinB, doEncoderD, CHANGE); 
 }
 
 // filter funcition

@@ -195,7 +195,7 @@ void robot_setup()
     pinMode(RIGHT_MTR_DIR, OUTPUT);
     pinMode(RIGHT_MTR_PWM, OUTPUT);
 
-    queue = xQueueCreate(1, sizeof(state));
+    queue = xQueueCreate(3, sizeof(state));
     queue_ret = xQueueCreate(1, sizeof(uint8_t));
     // Make sure we are stopped
     // robot_stop();

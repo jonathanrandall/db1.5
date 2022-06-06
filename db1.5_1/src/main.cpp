@@ -17,7 +17,7 @@
 #define RIGHT_MTR_DIR 12
 #define RIGHT_MTR_PWM 32
 
-#define encoder0PinA 2      // encoder 1
+#define encoder0PinA 33      // encoder 1
 #define encoder0PinB 4
 
 #define encoder1PinA 16     // encoder 2
@@ -37,6 +37,7 @@ unsigned long last_update;
 
 TaskHandle_t clean_up_ws;
 TaskHandle_t stp_robot_moving;
+TaskHandle_t debug_loop_task;
 SemaphoreHandle_t Semaphore_prev_time;
 SemaphoreHandle_t Semaphore_ws;
 
@@ -103,10 +104,10 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
     const char *action = received_object["action"];
     if (strcmp(action, "speed") == 0)
     {
-      Serial.println(received_object["value"]);
+      //Serial.println(received_object["value"]);
       motor_speed = (int)atoi(received_object["value"]);
       // motor_speed = map(motor_speed, 0, 100, 0,255)
-      Serial.println(motor_speed);
+      //Serial.println(motor_speed);
       // robot_set_speed();
       notifyClients();
     }
@@ -115,9 +116,9 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
       last_update = millis();
       const char *status = received_object["value"];
       str_status = String(status);
-      Serial.println(str_status);
+      //Serial.println(str_status);
       int stmp = motor_status_json[status];
-      Serial.println(stmp);
+      //Serial.println(stmp);
       robot_set_and_send_command((state)stmp);
       notifyClients();
     }
@@ -130,6 +131,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
     if (strcmp(action, "update") == 0)
     {
       // const char *status = received_object["value"];
+      // if it has been more than 90ms since last recieved don't do anything
       if (millis() - last_update > (message_time-10))
       {
         // then ew update
@@ -180,6 +182,9 @@ void clean_ws(void *parameters)
   }
 }
 
+
+//if we haven't recieved any commands for 500ms, then we will stop the robot. This is because if we set a command on a website
+//and then get disconnected, it will not keep running.
 void call_stp(void *parameters)
 {
   unsigned long pt; 
@@ -198,6 +203,32 @@ void call_stp(void *parameters)
   }
 }
 
+void debug_loop(void *parameters)
+{
+ 
+  for (;;)
+  {
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+    // Serial.print("left: ");
+    Serial.println(encoder1Pos);
+    // Serial.println(encoder0Pos);
+    if((float) abs(encoder1Pos) > one_m){
+      last_update = millis();
+      
+      
+      str_status = "stop";
+      Serial.println(str_status);
+     // int stmp = motor_status_json["stop"];
+      //Serial.println(stmp);
+      robot_set_and_send_command((state)stp);
+      encoder1Pos=0;
+      notifyClients();
+
+    }
+  }
+}
+
+
 void setup()
 {
   // put your setup code here, to run once:
@@ -208,6 +239,8 @@ void setup()
   
   initWiFi();
   initWebSocket();
+
+  // init_encoders();
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(SPIFFS, "/index.html", "text/html"); });
@@ -243,6 +276,14 @@ void setup()
       &stp_robot_moving, /* Task handle. */
       1);                /* Core where the task should run */
 
+  xTaskCreatePinnedToCore(
+      debug_loop,          /* Function to implement the task */
+      "debug_loop",        /* Name of the task */
+      2000,              /* Stack size in words */
+      NULL,              /* Task input parameter */
+      0,                 /* Priority of the task */
+      &debug_loop_task, /* Task handle. */
+      1);         
       
   init_encoders();
 }
