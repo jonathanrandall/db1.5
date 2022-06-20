@@ -1,7 +1,7 @@
 
 
 # db1.5
-**The Robot chasis follows the build at dronebot workshop. 
+** The Robot chasis follows the build at dronebot workshop. 
 
 See https://dronebotworkshop.com/build-a-real-robot/ for instructions on how I build the chasis.
 
