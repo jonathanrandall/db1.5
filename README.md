@@ -6,8 +6,8 @@
 See https://dronebotworkshop.com/build-a-real-robot/ for instructions on how I build the chasis.
 
 This includes the navigation controls for the main esp32 board on the robot. This board is connected to:
-*the two cytron MD10C motor controllers
-*the oled screen which gives the IP of the board.
+* the two cytron MD10C motor controllers
+* the oled screen which gives the IP of the board.
 
 It also contains the javascript/html/css files which are needed to bring up the navigation controls in the webpage. You will need to load these into SPIFFS on esp32.
 I have cut and pasted code from www.randomnerdtutorials.com for the implementation of the controls.
