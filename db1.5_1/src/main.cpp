@@ -10,6 +10,7 @@
 #include "motor_ctrl_stuff.h"
 #include "ssid_stuff.h"
 #include "encoders_stuff.h"
+#include "OLED_stuff.h"
 
 /*
 #define LEFT_MTR_DIR 26
@@ -59,7 +60,7 @@ void initSPIFFS()
 // Initialize WiFi
 void initWiFi()
 {
-  WiFi.mode(WIFI_STA);
+  WiFi.mode(WIFI_AP_STA);
   WiFi.begin(ssid, password);
   Serial.print("Connecting to WiFi ..");
   while (WiFi.status() != WL_CONNECTED)
@@ -126,6 +127,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
     {
       // const char *status = received_object["value"];
       str_status = status_names[(int)actstate];
+      
       notifyClients();
     }
     if (strcmp(action, "update") == 0)
@@ -139,6 +141,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
         const char *status = received_object["value"];
         
         str_status = String(status);
+        
         int stmp = motor_status_json[status];
         // Serial.println(stmp);
         robot_set_and_send_command((state)stmp);
@@ -238,7 +241,24 @@ void setup()
   initSPIFFS();
   
   initWiFi();
+
+  oled.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  // oled stuff to display ip
+  oled.clearDisplay();
+  oled.setFont(&FreeSans9pt7b);
+  oled.setTextColor(WHITE);
+  oled.setTextSize(1);
+  oled.setCursor(0, 17);
+
+  oled.println(WiFi.localIP());
+  oled.display();
+  // delay(2000);
+
   initWebSocket();
+
+  esp_now_setup();
+
+  // register_peers();
 
   // init_encoders();
 
@@ -286,6 +306,7 @@ void setup()
       1);         
       
   init_encoders();
+
 }
 
 void loop()
