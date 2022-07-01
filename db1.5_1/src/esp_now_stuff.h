@@ -6,6 +6,14 @@
 // #include <motor_ctrl_stuff.h>
 #include <ssid_stuff.h> //this file contains my ssid and password.
 
+QueueHandle_t check_sonar_queue;
+TaskHandle_t check_sonar_task;
+
+long count_rcv = 0;
+
+void notifyClients();
+void notifyClients(const char *status);
+
 TaskHandle_t send_status_task;
 
 QueueHandle_t send_status_queu;
@@ -21,6 +29,17 @@ typedef struct test_struct
 } test_struct;
 
 test_struct myData;
+
+typedef struct data_struct_rcv
+{
+    uint8_t id = 1; // id for data
+    bool status = false;
+    char place_holder[12];
+    float distances[10] = {0};
+
+} data_struct_rcv;
+
+data_struct_rcv myData_rcv;
 
 // REPLACE WITH YOUR ESP RECEIVER'S MAC ADDRESS
 uint8_t broadcastAddress1[] = {0x24, 0xD7, 0xEB, 0x0F, 0x97, 0x54};
@@ -42,6 +61,42 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
     Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
 
+void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
+{
+
+    // Serial.print("Bytes received: ");
+    memcpy(&myData_rcv, incomingData, sizeof(myData_rcv));
+    Serial.print("Bytes received: ");
+    Serial.println(len);
+    Serial.print("data recieved: ");
+    Serial.println(myData_rcv.status);
+    Serial.println();
+    Serial.println(myData_rcv.id);
+    if (myData_rcv.id == 1) //recieved from top peripheral board.
+    {
+        if (myData_rcv.status)
+        {
+            
+            // notifyClients("e_stop_clear");
+        }
+        else
+        {
+            // robot_set_and_send_command("e_stop");
+            // notifyClients("e_stop");
+        }
+    }
+    
+    if (myData_rcv.id == 2) //recieved from top peripheral board.
+    {
+        count_rcv++;
+        if (count_rcv>5){
+            xQueueSend(check_sonar_queue, &myData_rcv, portMAX_DELAY);
+            Serial.println("sending sonar data");
+            //check robot status.
+        }
+    }
+}
+
 void register_peers()
 {
     // Serial.begin(115200);
@@ -52,6 +107,7 @@ void register_peers()
     }
 
     esp_now_register_send_cb(OnDataSent);
+    esp_now_register_recv_cb(OnDataRecv);
 
     // register peer
 
@@ -116,17 +172,20 @@ void send_mtr_status_rtos(void *params)
     }
 }
 
-void esp_now_setup(){
+void esp_now_setup()
+{
+
     register_peers();
+
     send_status_queu = xQueueCreate(3, sizeof(test_struct));
     xTaskCreate(
-        send_mtr_status_rtos, /* Function to implement the task */
-        "update_motor_status",    /* Name of the task */
-        2048,            /* Stack size in words */
-        NULL,            /* Task input parameter */
-        0,               /* Priority of the task */
-        &send_status_task     /* Task handle. */);              
-        /* Core where the task should run */
+        send_mtr_status_rtos,  /* Function to implement the task */
+        "update_motor_status", /* Name of the task */
+        2048,                  /* Stack size in words */
+        NULL,                  /* Task input parameter */
+        0,                     /* Priority of the task */
+        &send_status_task /* Task handle. */);
+    /* Core where the task should run */
 }
 
 #endif

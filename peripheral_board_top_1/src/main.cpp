@@ -2,13 +2,13 @@
 //  light will be connected on pin 13.
 
 #include <Arduino.h>
-#include <TFT_eSPI.h> // Hardware-specific library
 #include <SPI.h>
 #include <Adafruit_NeoPixel.h>
 #include <WiFi.h>
 #include <esp_now.h>
 #include <esp_wifi.h>
 #include <Arduino_JSON.h>
+#include <tft_touch_stuff.h>
 #ifndef PSTR
 #define PSTR // Make Arduino Due happy
 #endif
@@ -28,6 +28,7 @@
 #define purple 31949
 
 TaskHandle_t flash_colours_task;
+TaskHandle_t monitor_button_task;
 
 // QueueHandle_t queue;
 // QueueHandle_t queue_ret;
@@ -36,9 +37,13 @@ TaskHandle_t flash_colours_task;
 
 JSONVar motor_status_json;
 
-String variable = "stop";
+String variable = "e_stop";
 
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+
+bool red_button_sent = false;
+bool green_button_sent = false;
+
 
 
 void flash_leds_loop(void *parameter)
@@ -86,12 +91,22 @@ int32_t getWiFiChannel(const char *ssid)
 
 typedef struct data_struct
 {
-  String status = "stop";
+  String status = "e_stop";
 
 } data_struct;
 
+typedef struct data_struct_send
+{
+  uint8_t id=1; //id for data
+  bool status = false;
+  char place_holder[12];
+  float distances[10];
+
+} data_struct_send;
+
 data_struct myData;
 
+data_struct_send myData_send;
 
 enum state
 {
@@ -135,6 +150,26 @@ void init_msj()
   motor_status_json["e_stop_clear"][1] = ((int)pink);
 }
 
+String success;
+
+uint8_t broadcastAddress[] = {0x7C, 0x9E, 0xBD, 0x48, 0x0F, 0xA4};
+
+esp_now_peer_info_t peerInfo;
+
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
+{
+  Serial.print("\r\nLast Packet Send Status:\t");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  if (status == 0)
+  {
+    success = "Delivery Success :)";
+  }
+  else
+  {
+    success = "Delivery Fail :(";
+  }
+}
+
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
 
@@ -148,9 +183,54 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 
   variable = myData.status;
 
+  // if(variable == "e_stop") redBtn(); //show the start button
+
   // update flash colours task
 
   // || !strcmp(variable, "backward")|| !strcmp(variable, "forward") || !strcmp(variable, "left") || !strcmp(variable, "right")){
+}
+
+void monitor_button(void *parameter)
+{
+  uint16_t x, y;
+
+  for (;;)
+  {
+    if (tft.getTouch(&x, &y))
+    {
+
+      if ((x > GREENBUTTON_X) && (x < (GREENBUTTON_X + GREENBUTTON_W)))
+      {
+        if ((y > GREENBUTTON_Y) && (y <= (GREENBUTTON_Y + GREENBUTTON_H)))
+        {
+
+          redBtn();
+          vTaskDelay(150 / portTICK_PERIOD_MS);
+          x = 0;
+          myData_send.status = SwitchOn;
+          Serial.println("green button");
+
+          esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&myData_send, sizeof(myData_send));
+        }
+      }
+
+      if ((x > REDBUTTON_X) && (x < (REDBUTTON_X + REDBUTTON_W)))
+      {
+        if ((y > REDBUTTON_Y) && (y <= (REDBUTTON_Y + REDBUTTON_H)))
+        {
+          greenBtn();
+          vTaskDelay(150 / portTICK_PERIOD_MS);
+          
+          myData_send.status = SwitchOn;
+          Serial.println(variable);
+          
+            esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&myData_send, sizeof(myData_send));
+          Serial.println("green button");
+        }
+      }
+      Serial.println(SwitchOn);
+    }
+  }
 }
 
 void setup()
@@ -167,15 +247,19 @@ void setup()
 
   init_msj();
 
+  init_tft();
+
   WiFi.mode(WIFI_STA);
 
   int32_t channel = getWiFiChannel(ssid);
 
-  WiFi.printDiag(Serial); // Uncomment to verify channel number before
+  
+
+  // WiFi.printDiag(Serial); // Uncomment to verify channel number before
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
   esp_wifi_set_promiscuous(false);
-  WiFi.printDiag(Serial); // Uncomment to verify channel change after
+  // WiFi.printDiag(Serial); // Uncomment to verify channel change after
 
   Serial.println(" initializing ESP-NOW");
   // Init ESP-NOW
@@ -190,14 +274,37 @@ void setup()
   }
 
   esp_now_register_recv_cb(OnDataRecv);
+  esp_now_register_send_cb(OnDataSent);
 
-  xTaskCreatePinnedToCore(flash_leds_loop, /* Function to implement the task */
-        "flash_leds",    /* Name of the task */
-        2048,            /* Stack size in words */
-        NULL,            /* Task input parameter */
-        0,               /* Priority of the task */
-        &flash_colours_task,     /* Task handle. */
-        1);              /* Core where the task should run */
+  memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+
+  peerInfo.channel = 0;
+  peerInfo.encrypt = false;
+
+  if (esp_now_add_peer(&peerInfo) != ESP_OK)
+  {
+    Serial.println("Failed to add peer");
+  }
+
+  // greenBtn();
+
+  // greenBtn();
+
+  xTaskCreatePinnedToCore(flash_leds_loop,     /* Function to implement the task */
+                          "flash_leds",        /* Name of the task */
+                          2048,                /* Stack size in words */
+                          NULL,                /* Task input parameter */
+                          0,                   /* Priority of the task */
+                          &flash_colours_task, /* Task handle. */
+                          1);                  /* Core where the task should run */
+
+  // xTaskCreatePinnedToCore(monitor_button,       /* Function to implement the task */
+  //                         "monitor_touch",      /* Name of the task */
+  //                         4096,                 /* Stack size in words */
+  //                         NULL,                 /* Task input parameter */
+  //                         2,                    /* Priority of the task, higher priority because emergency stop */
+  //                         &monitor_button_task, /* Task handle. */
+  //                         1);                   /* Core where the task should run */
 }
 
 void loop()

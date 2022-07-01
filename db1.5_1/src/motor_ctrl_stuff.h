@@ -6,9 +6,10 @@
 
 TaskHandle_t robot_move;
 
+
 QueueHandle_t queue;
 QueueHandle_t queue_ret;
-
+SemaphoreHandle_t Semaphore_prev_time;
 UBaseType_t n_messages;
 
 #define LEFT_MTR_DIR 26
@@ -92,7 +93,7 @@ void set_actstate(state s)
             // can't set state when emergency stopped.
         }
     }
-    else
+    else if (s != e_stop_clear)
     {
         // set state
         actstate = s;
@@ -105,11 +106,14 @@ void set_actstate(state s)
         if (ret_val)
         {
             myData.status = status_names[actstate];
-            xQueueSend(send_status_queu, &myData,message_time);
-        } else {
-            robot_set_and_send_command(e_stop);
+            xQueueSend(send_status_queu, &myData, message_time);
+        }
+        else
+        {
+            // robot_set_and_send_command(e_stop);
+            robot_stop();
             myData.status = "e_stop";
-            xQueueSend(send_status_queu, &myData,message_time);
+            xQueueSend(send_status_queu, &myData, message_time);
         }
         // status_send_mtr_status(status_names[actstate]);
     }
@@ -146,12 +150,12 @@ void robot_set_speed(int ms = motor_speed)
             if (actstate == fwdlft || actstate == revlft)
             {
                 ls = min(30, ms - 30);
-                rs = max(255, ms + 30);
+                rs = max(255, ms + 20);
             }
             else
             {
                 rs = min(30, ms - 30);
-                ls = max(255, ms + 30);
+                ls = max(255, ms + 20);
             }
             robot_set_speed_lr(ls, rs);
         }
@@ -168,7 +172,9 @@ void robot_set_speed(int ms = motor_speed)
 unsigned long robot_set_and_send_command(state st)
 {
     // check emergency stop
+    xSemaphoreTake(Semaphore_prev_time, portMAX_DELAY);
     previous_time = millis();
+    xSemaphoreGive(Semaphore_prev_time);
 
     // Serial.println("robot set and send");
     // Serial.println(st);
@@ -178,6 +184,7 @@ unsigned long robot_set_and_send_command(state st)
 
     if (st == e_stop)
     {
+        set_actstate(st);
         robot_stop();
         return 3;
     }
@@ -230,6 +237,55 @@ void robot_move_loop(void *parameter)
         }
 
         xQueueSend(queue_ret, &rv, message_time);
+        // if(st==e_stop){
+        //     robot_stop();
+        //     vTaskDelete(NULL);
+        // }
+    }
+}
+
+void check_sonar_loop(void *parameter)
+{
+
+    for (;;)
+    {
+        data_struct_rcv dsr;
+        uint8_t rv = 1;
+        float min_dist = 500.0;
+        int min_i = -1;
+        // delay(1);
+
+        xQueueReceive(check_sonar_queue, &dsr, portMAX_DELAY);
+
+        for (int i = 0; i < 9; i++)
+        {
+            if (dsr.distances[i] < min_dist && dsr.distances[i] > 2.0)
+            {
+                min_dist = dsr.distances[i];
+                min_i = i;
+            }
+        }
+
+        if (min_dist < 15.0)
+        {
+            robot_set_and_send_command(stp);
+            notifyClients();
+        }
+        // Serial.println("first order recieved: " + String((int)st));
+        // if ((int)st < (int)stp)
+        // {
+        //     // Serial.println("order recieved");
+
+        //     digitalWrite(LEFT_MTR_DIR, mtr_lft_state[(int)st]);
+        //     digitalWrite(RIGHT_MTR_DIR, mtr_rgt_state[(int)st]);
+        //     robot_set_speed();
+        // }
+        // else
+        // {
+        //     robot_stop();
+        // }
+
+        // xQueueSend(queue_ret, &rv, message_time);
         // if(st==e_stop){
         //     robot_stop();
         //     vTaskDelete(NULL);
