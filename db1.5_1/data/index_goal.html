@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="style_goal.css">
     <title>ESP32 CAM Robot</title>
 
 
@@ -18,7 +18,7 @@
                 src="C:\Users\jonny\Documents\Arduino\Projects\Jessica Mothers day\pictures\final_pictures\alicia_baby2.png" />
            <div class = "cards"> 
                <table><tr><td align = "center">
-                <button class="button button2" id="go_to_goal"><a href="goal_seek">GOAL</a></button>
+                <button class="button button2" id="go_to_manual"><a href="manual_drive">MANUAL</a></button>
             </td><td></td><td align = "center">
                <button class="button button2" id="stream1"
                onclick="try{document.getElementById('REAR').id='FRONT';} catch(e){}">FRONT</button>
@@ -100,8 +100,8 @@
 
 
             <p class="switch">
-                <input type="range" onchange="update_motor_speed(this)" id="slider2" min="0" max="255" step="1"
-                    value="0" class="slider">
+                <input type="range" onchange="update_motor_speed(this)" id="slider2" min="0" max="200" step="1"
+                    value="100" class="slider">
             </p>
 
             <p class="state">Speed: <span id="textSliderValue">0</span>, Robot State: <span
@@ -109,7 +109,7 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script_goal.js"></script>
 </body>
 
 </html>

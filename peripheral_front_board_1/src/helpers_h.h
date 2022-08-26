@@ -15,14 +15,14 @@
 
 // at the moment i've got three in the middle, two at each edge and two facing the bottom. I think I'll give the onces facing the bottom a miss now.
 
-#define TRIGGER_PIN_LF 27 // left front purple 5
-#define ECHO_PIN_LF 26  //white 18
+#define TRIGGER_PIN_RS 27 // left front purple 5
+#define ECHO_PIN_RS 26  //white 18
 #define TRIGGER_PIN_LS 2 // left side grren
 #define ECHO_PIN_LS 4  //yellow
 #define TRIGGER_PIN_RF 13 // right front gray
 #define ECHO_PIN_RF 14 //purple
-#define TRIGGER_PIN_RS 5 // right side blue
-#define ECHO_PIN_RS 18 //yellow
+#define TRIGGER_PIN_LF 5 // right side blue
+#define ECHO_PIN_LF 18 //yellow
 
 // #define TRIGGER_PIN_RB 16 // right bottom
 // #define ECHO_PIN_RB 17
@@ -106,7 +106,7 @@ void sonar1_loop(void *params)
   for (;;)
   {
 
-    myData.distances[sonar_indices[s11]] = sonars_all[s11].get_distance();
+    myData.distances[sonar_indices[s11]] = sonars_all[s11].get_distance1();
 
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
@@ -130,23 +130,50 @@ void sonar1_loop_mid(void *params)
   }
 }
 
+void sonar1_loop_all(void *params)
+{
+  // lf, rf, mid = 0,2,4
+  int front_sonars[3] = {0,2,4};
+  int slid = 1;
+  int srid = 3;
+  // float r1, r2, r3;
+  for (;;)
+  {
+
+    for (int i = 0; i < 3; i++)
+    {
+      // r1 = sonars_all[front_sonars[i]].get_distance();
+
+      myData.distances[sonar_indices[front_sonars[i]]] = sonars_all[front_sonars[i]].get_distance();
+      vTaskDelay(20 / portTICK_PERIOD_MS);
+    }
+
+    myData.distances[sonar_indices[slid]] = sonars_all[slid].get_distance();
+    vTaskDelay(20 / portTICK_PERIOD_MS);
+    myData.distances[sonar_indices[srid]] = sonars_all[srid].get_distance();
+
+
+  }
+}
+
 void sonar_servo_loop_l(void *params)
 {
   
   // s11 = *((servo_sonar *)params);
   // Serial.println(s11.id);
-  int s11id = 1; //left_servo_sonar.id;
+  int s11id = 1;  //left_servo_sonar.id;
   int it_order[4] = {0,1,2,1}; //cause I want it to go back and forward
   for (;;)
   {
     float res;
 
-    for (int j = 0; j < 4; j++)
+    for (int j = 0; j < 1; j++)
     {
       // left_servo_sonar.servo.write(it_order[j] * 26 + 10);
-      servo_l.write(it_order[j] * 26 + 10);
-      // s11.servo.write(0);
-      vTaskDelay(240 / portTICK_PERIOD_MS); // give servo time to finish
+      // i've commented out the sonar suff. It's one more thing for an error.
+      // servo_l.write(it_order[j] * 26 + 10);
+      
+      // vTaskDelay(240 / portTICK_PERIOD_MS); // give servo time to finish
        res = sonars_all[s11id].get_distance1();
       // if(res!=0)
        myData.distances[sonar_indices[s11id] +it_order[j]] = res;
@@ -186,7 +213,7 @@ void sonar_servo_loop_r(void *params)
   {
     float res;
 
-    for (int j = 0; j < 4; j++)
+    for (int j = 0; j < 1; j++)  //changed j to 1 because i'm not using the servos.
     {
       // right_servo_sonar.servo.write(it_order[j] * 26 + 10); //it_order[j] 
       servo_r.write(it_order[j] * 26 + 10);

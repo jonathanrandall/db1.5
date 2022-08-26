@@ -52,13 +52,13 @@ uint8_t broadcastAddress2[] = {0x24, 0xDF, 0xEB, 0x0F, 0x98, 0x44};
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
     char macStr[18];
-    Serial.print("Packet to: ");
+    //Serial.print("Packet to: ");
     // Copies the sender mac address to a string
     snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
              mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-    Serial.print(macStr);
-    Serial.print(" send status:\t");
-    Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+    //Serial.print(macStr);
+    //Serial.print(" send status:\t");
+    //Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
 
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
@@ -66,12 +66,12 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 
     // Serial.print("Bytes received: ");
     memcpy(&myData_rcv, incomingData, sizeof(myData_rcv));
-    Serial.print("Bytes received: ");
-    Serial.println(len);
-    Serial.print("data recieved: ");
-    Serial.println(myData_rcv.status);
-    Serial.println();
-    Serial.println(myData_rcv.id);
+    // Serial.print("Bytes received: ");
+    // Serial.println(len);
+    // Serial.print("data recieved: ");
+    // Serial.println(myData_rcv.status);
+    // Serial.println();
+    // Serial.println(myData_rcv.id);
     if (myData_rcv.id == 1) //recieved from top peripheral board.
     {
         if (myData_rcv.status)
@@ -91,7 +91,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
         count_rcv++;
         if (count_rcv>5){
             xQueueSend(check_sonar_queue, &myData_rcv, portMAX_DELAY);
-            Serial.println("sending sonar data");
+            //Serial.println("sending sonar data");
             //check robot status.
         }
     }

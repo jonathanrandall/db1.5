@@ -34,13 +34,13 @@ float sonar_jr::get_distance1()
   d1 = get_distance();
   d_max = d1;
   d_min = d1;
-  delay(20);
+  delay(10);
   d2 = get_distance();
   if (d2 < d_min)
     d_min = d2;
   else
     d_max = d2;
-  delay(20);
+  delay(10);
   d3 = get_distance();
   if (d3 > d_max)
     d_max = d3;

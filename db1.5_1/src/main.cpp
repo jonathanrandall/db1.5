@@ -13,6 +13,8 @@
 #include "OLED_stuff.h"
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
+#include "imu_stuff.h"
+#include "goal_seek_suff.h"
 
 /*
 #define LEFT_MTR_DIR 26
@@ -56,6 +58,8 @@ bool em_stop_cleared = false;
 
 JSONVar motor_status_json;
 
+float goal_dist;
+
 void IRAM_ATTR emergency_stop()
 {
   em_stop_int = true;
@@ -67,7 +71,8 @@ void IRAM_ATTR emergency_stop()
 void IRAM_ATTR clear_emergency_stop()
 {
   em_stop_cleared = true;
-  robot_set_and_send_command(e_stop_clear);
+  // delay(5);
+  // robot_set_and_send_command(e_stop_clear);
   // actstate = e_stop_clear;
   // set_actstate(e_stop_clear);
   // notifyClients();
@@ -96,6 +101,7 @@ void initWiFi()
   Serial.println(WiFi.localIP());
 }
 
+// motor status json
 void init_msj()
 {
   motor_status_json["forward"] = ((int)fwd);
@@ -114,7 +120,7 @@ void init_msj()
 void notifyClients()
 {
   str_status = status_names[(int)actstate];
-  String status = "{\"speed\":" + String(motor_speed) + ",\"status\":" + "\"" + str_status + "\"}";
+  String status = "{\"speed\":" + String(motor_speed) + ",\"status\":" + "\"" + str_status + "\"" + ",\"goal_dist\":" + "\"" + goal_dist + "\"}";
   // Serial.println(status);
   // ws.cleanupClients();
   ws.textAll(status);
@@ -129,9 +135,10 @@ void notifyClients(const char *status)
 
   robot_set_and_send_command((state)stmp);
   Serial.println(actstate);
-  notifyClients();
+  // notifyClients();
 }
 
+// mostly cut and pasted from random nerd tutorials.
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 {
   AwsFrameInfo *info = (AwsFrameInfo *)arg;
@@ -150,6 +157,13 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
       // robot_set_speed();
       notifyClients();
     }
+    if (strcmp(action, "goal_dist") == 0)
+    {
+      // Serial.println(received_object["value"]);
+      goal_dist = (int)atoi(received_object["value"]);
+
+      notifyClients();
+    }
     if (strcmp(action, "status") == 0)
     {
       last_update = millis();
@@ -161,7 +175,82 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
         int stmp = motor_status_json[status];
         robot_set_and_send_command((state)stmp);
         str_status = status_names[(int)actstate];
-        notifyClients();
+        // notifyClients();
+        // if (millis() - ws_clean > (clean_up_every))
+        // {
+        //   ws.cleanupClients();
+        //   ws_clean = millis();
+        // }
+      }
+      else
+      {
+        // do nothing
+      }
+
+      // Serial.println(stmp);
+    }
+    if (strcmp(action, "goal_status") == 0)
+    {
+      Serial.println("goal status received");
+      last_update = millis();
+      const char *status = received_object["value"];
+      str_status = String(status);
+      // Serial.println(str_status);
+      if (motor_status_json.hasOwnProperty(status))
+      {
+        try
+        {
+          Serial.println("trying to delete taks");
+
+          if (goal_task_running)
+            if (update_robot_pos_task != NULL)
+            {
+              vTaskDelete(update_robot_pos_task); // freeRTOS
+              update_robot_pos_task = NULL; //you need to set this to NULL for some reason.
+            }
+        }
+        catch (...)
+        {
+          Serial.println("exdeption");
+        }
+
+        xSemaphoreTake(Semaphore_prev_time, portMAX_DELAY);
+        goal_task_running = true;
+        xSemaphoreGive(Semaphore_prev_time);
+        // this will be multiplied by pi/2
+        int stmp = motor_status_json[status];
+        if (stmp >= (int)stp)
+        {
+          robot_set_and_send_command((state)stmp);
+          str_status = status_names[(int)actstate];
+        }
+        else
+        {
+
+          stmp = motor_status_direction[status];
+          // set robot new target.
+          
+          target_pos.theta = ((float) ((int) stmp)) * pi / 4;
+          Serial.println(target_pos.theta);
+          target_pos.y = goal_dist * sin(target_pos.theta);
+          target_pos.x = goal_dist * cos(target_pos.theta);
+          robot_pos = {0.0, 0.0, 0.0};
+
+          robot_set_and_send_command(fwd);
+          str_status = status_names[(int)actstate];
+
+          Serial.println("starting goal task");
+
+          xTaskCreatePinnedToCore(
+              update_robot_pos_loop,  /* Function to implement the task */
+              "update_robot_pos",     /* Name of the task */
+              1024 * 4,               /* Stack size in words */
+              NULL,                   /* Task input parameter */
+              0,                      /* Priority of the task */
+              &update_robot_pos_task, /* Task handle. */
+              1);                     /* Core where the task should run */
+        }
+        // notifyClients();
         // if (millis() - ws_clean > (clean_up_every))
         // {
         //   ws.cleanupClients();
@@ -265,6 +354,7 @@ void call_stp(void *parameters)
     {
       // Serial.println(millis()-pt);
       robot_set_and_send_command(stp);
+      // Serial.println("Stopping");
     }
   }
 }
@@ -278,7 +368,9 @@ void debug_loop(void *parameters)
 
     if (em_stop_cleared)
     {
-      notifyClients();
+      if (actstate == e_stop)
+        robot_set_and_send_command(e_stop_clear);
+      // notifyClients();
       em_stop_cleared = false;
       Serial.println("in em stop clear");
     }
@@ -287,24 +379,26 @@ void debug_loop(void *parameters)
     {
       notifyClients();
       em_stop_int = false;
+      robot_set_and_send_command(e_stop);
       Serial.println("in em stop int");
     }
 
     // Serial.print("left: ");
     // Serial.println(encoder1Pos);
     // Serial.println(encoder0Pos);
-    if ((float)abs(encoder1Pos) > one_m)
-    {
-      last_update = millis();
+    if (false)
+      if ((float)abs(encoder1Pos) > one_m)
+      {
+        last_update = millis();
 
-      str_status = "stop";
-      Serial.println(str_status);
-      // int stmp = motor_status_json["stop"];
-      // Serial.println(stmp);
-      robot_set_and_send_command((state)stp);
-      encoder1Pos = 0;
-      notifyClients();
-    }
+        str_status = "stop";
+        Serial.println(str_status);
+        // int stmp = motor_status_json["stop"];
+        // Serial.println(stmp);
+        robot_set_and_send_command((state)stp);
+        encoder1Pos = 0;
+        // notifyClients();//this gets called in set and set command
+      }
   }
 }
 
@@ -313,7 +407,11 @@ void setup()
   // put your setup code here, to run once:
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
   Serial.begin(115200);
-  actstate = e_stop;
+  actstate = e_stop_clear; // e_stop;
+
+  robot_pos = {0.0, 0.0, 0.0}; // pi / 2};
+  target_pos = {0.0, 300.0, pi / 2};
+  theta = robot_pos.theta;
 
   oled.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   // oled stuff to display ip
@@ -328,6 +426,7 @@ void setup()
   // delay(2000);
 
   init_msj();
+  init_msd();
   initSPIFFS();
 
   initWiFi();
@@ -349,6 +448,12 @@ void setup()
   // init_encoders();
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(SPIFFS, "/index.html", "text/html"); });
+
+  server.on("/goal_seek", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(SPIFFS, "/index_goal.html", "text/html"); });
+
+  server.on("/manual_drive", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(SPIFFS, "/index.html", "text/html"); });
 
   server.serveStatic("/", SPIFFS, "/");
@@ -373,36 +478,38 @@ void setup()
   //     &clean_up_ws,  /* Task handle. */
   //     1);            /* Core where the task should run */
 
-  xTaskCreatePinnedToCore(
-      call_stp,          /* Function to implement the task */
-      "call_stp",        /* Name of the task */
-      1000,              /* Stack size in words */
-      NULL,              /* Task input parameter */
-      0,                 /* Priority of the task */
-      &stp_robot_moving, /* Task handle. */
-      1);                /* Core where the task should run */
+  if (false)
+    xTaskCreatePinnedToCore(
+        call_stp,          /* Function to implement the task */
+        "call_stp",        /* Name of the task */
+        15360,             /* Stack size in words */
+        NULL,              /* Task input parameter */
+        0,                 /* Priority of the task */
+        &stp_robot_moving, /* Task handle. */
+        1);                /* Core where the task should run */
+
+  xTaskCreatePinnedToCore( // set true if you want to debug
+      debug_loop,          /* Function to implement the task */
+      "debug_loop",        /* Name of the task */
+      2000,                /* Stack size in words */
+      NULL,                /* Task input parameter */
+      0,                   /* Priority of the task */
+      &debug_loop_task,    /* Task handle. */
+      1);
+  check_sonar_queue = xQueueCreate(1, sizeof(data_struct_rcv));
 
   xTaskCreatePinnedToCore(
-      debug_loop,       /* Function to implement the task */
-      "debug_loop",     /* Name of the task */
-      2000,             /* Stack size in words */
-      NULL,             /* Task input parameter */
-      0,                /* Priority of the task */
-      &debug_loop_task, /* Task handle. */
-      1);
-  check_sonar_queue = xQueueCreate(1, sizeof(data_struct_rcv));;
-  xTaskCreatePinnedToCore(
-      check_sonar_loop,       /* Function to implement the task */
-      "check_sonar_loop",     /* Name of the task */
-      2000,             /* Stack size in words */
-      NULL,             /* Task input parameter */
-      0,                /* Priority of the task */
-      &check_sonar_task, /* Task handle. */
+      check_sonar_loop,   /* Function to implement the task */
+      "check_sonar_loop", /* Name of the task */
+      2000,               /* Stack size in words */
+      NULL,               /* Task input parameter */
+      0,                  /* Priority of the task */
+      &check_sonar_task,  /* Task handle. */
       1);
 
   init_encoders();
 
-  notifyClients("e_stop"); // emergency stop
+  notifyClients(); // emergency stop
   oled.clearDisplay();
   oled.setFont(&FreeSans9pt7b);
   oled.setTextColor(WHITE);

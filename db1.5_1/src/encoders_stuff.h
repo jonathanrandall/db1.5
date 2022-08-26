@@ -14,11 +14,14 @@ volatile long encoder0Pos = 0;    // encoder 1
 volatile long encoder1Pos = 0;    // encoder 2
 
 const float ppr = 753.2; //pulses per revolution
-const float wheel_diameter = 101;//mm
-const float circum = 317.3; //mm
+const float wheel_diameter = 10;//cm
+const float circum = 31.73; //cm
 const float pulse_dist = circum/ppr;
+const float robot_width = 34.0; //cm
+const float pi = 3.14159265359;
+const float turning_circle = 34.0*pi;
 
-const float one_m = 1000/pulse_dist; //number of pulses to travel 1m
+const float one_m = 100/pulse_dist; //number of pulses to travel 1m
 
 void doEncoderA(){  
 

@@ -3,9 +3,10 @@
 
 #include <Arduino.h>
 #include <esp_now_stuff.h>
+#include <imu_stuff.h>
+#include <encoders_stuff.h>
 
 TaskHandle_t robot_move;
-
 
 QueueHandle_t queue;
 QueueHandle_t queue_ret;
@@ -20,6 +21,24 @@ UBaseType_t n_messages;
 #define RIGHT_FWD LOW
 #define LEFT_BACK LOW
 #define RIGHT_BACK HIGH
+
+typedef struct pos  {
+  float x;
+  float y;
+  float theta;
+} pos ;
+
+typedef struct s_min  {
+  float x;
+  int y;
+} s_min ;
+
+pos robot_pos;
+pos target_pos;
+float theta;
+float delta_theta;
+float w1, w2;
+
 
 enum state
 {
@@ -79,10 +98,10 @@ void set_actstate(state s)
     int ret_val = 0;
     if (actstate == s)
     {
-        // do nothing
-        return;
+        // do nothingl
+        // return;
     }
-    if (actstate == e_stop)
+    else if (actstate == e_stop)
     {
         if (s == e_stop_clear)
         {
@@ -99,7 +118,7 @@ void set_actstate(state s)
         actstate = s;
         if (xQueueSend(queue, &s, message_time))
         {
-            Serial.println("sending");
+            //Serial.println("sending");
         }                                                 // portMAX_DELAY);
         xQueueReceive(queue_ret, &ret_val, message_time); // hand shake
         // udpate other boards of changes to state.
@@ -117,6 +136,7 @@ void set_actstate(state s)
         }
         // status_send_mtr_status(status_names[actstate]);
     }
+    notifyClients();
 }
 
 void robot_stop()
@@ -171,11 +191,13 @@ void robot_set_speed(int ms = motor_speed)
 
 unsigned long robot_set_and_send_command(state st)
 {
-    // check emergency stop
+    //// check emergency stop
+    //Serial.println("semaphore here");
+    delay(2);
     xSemaphoreTake(Semaphore_prev_time, portMAX_DELAY);
     previous_time = millis();
     xSemaphoreGive(Semaphore_prev_time);
-
+    //Serial.println("semaphore gone");
     // Serial.println("robot set and send");
     // Serial.println(st);
     // Serial.println(actstate());
@@ -244,54 +266,7 @@ void robot_move_loop(void *parameter)
     }
 }
 
-void check_sonar_loop(void *parameter)
-{
 
-    for (;;)
-    {
-        data_struct_rcv dsr;
-        uint8_t rv = 1;
-        float min_dist = 500.0;
-        int min_i = -1;
-        // delay(1);
-
-        xQueueReceive(check_sonar_queue, &dsr, portMAX_DELAY);
-
-        for (int i = 0; i < 9; i++)
-        {
-            if (dsr.distances[i] < min_dist && dsr.distances[i] > 2.0)
-            {
-                min_dist = dsr.distances[i];
-                min_i = i;
-            }
-        }
-
-        if (min_dist < 15.0)
-        {
-            robot_set_and_send_command(stp);
-            notifyClients();
-        }
-        // Serial.println("first order recieved: " + String((int)st));
-        // if ((int)st < (int)stp)
-        // {
-        //     // Serial.println("order recieved");
-
-        //     digitalWrite(LEFT_MTR_DIR, mtr_lft_state[(int)st]);
-        //     digitalWrite(RIGHT_MTR_DIR, mtr_rgt_state[(int)st]);
-        //     robot_set_speed();
-        // }
-        // else
-        // {
-        //     robot_stop();
-        // }
-
-        // xQueueSend(queue_ret, &rv, message_time);
-        // if(st==e_stop){
-        //     robot_stop();
-        //     vTaskDelete(NULL);
-        // }
-    }
-}
 
 void robot_setup()
 {
@@ -314,6 +289,10 @@ void robot_setup()
     ledcAttachPin(RIGHT_MTR_PWM, mtr_right_pwm_channel);
     ledcSetup(mtr_right_pwm_channel, freq, lresolution);
     ledcWrite(mtr_right_pwm_channel, 0);
+    theta = 0.0; //pi/2.0;
+    robot_pos = {0.0,0.0, theta};
+    target_pos = {200.0,200.0, theta};
+    
 
     xTaskCreatePinnedToCore(
         robot_move_loop, /* Function to implement the task */
